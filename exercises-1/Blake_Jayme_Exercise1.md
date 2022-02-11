@@ -31,7 +31,7 @@ minimize delays.
 
 ![](Blake_Jayme_Exercise1_files/figure-markdown_strict/2B-1.png)
 
-This graph shows the number of Hot 100 Entries from years 1958 to 20021.
+This graph shows the number of Hot 100 Entries from years 1958 to 2021.
 The slow decline of song diversity from ~1970 to an all time low in the
 early aughts is interesting, and you can clearly see the impact of
 iTunes and streaming starting around 2005. Maybe the decline in musical

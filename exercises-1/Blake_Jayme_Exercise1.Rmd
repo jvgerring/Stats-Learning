@@ -113,7 +113,7 @@ ggplot(unique_songs) +
 
 ```
 
-This graph shows the number of Hot 100 Entries from years 1958 to 20021. The slow decline of song diversity from ~1970 to an all time low in the early aughts is interesting, and you can clearly see the impact of iTunes and streaming starting around 2005. Maybe the decline in musical diversity in the 20th century could be attributed to a consolidation of genres in the zeitgeist. 
+This graph shows the number of Hot 100 Entries from years 1958 to 2021. The slow decline of song diversity from ~1970 to an all time low in the early aughts is interesting, and you can clearly see the impact of iTunes and streaming starting around 2005. Maybe the decline in musical diversity in the 20th century could be attributed to a consolidation of genres in the zeitgeist. 
   
 ### Part C: Ten-Week Hit
 ```{r 2C,  message=FALSE, echo=FALSE}
