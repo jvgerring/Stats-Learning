@@ -10,7 +10,7 @@ minimize delays.
 
 ## Problem 2: Wrangling the Billboard Top 100
 
-### Part A:The Top 10 Most Popular Songs
+### Part A:The Top 10 Most Popular Songs Since 1958
 
     ## # A tibble: 10 × 3
     ## # Groups:   performer [10]
@@ -26,6 +26,8 @@ minimize delays.
     ##  8 Adele                                  Rolling In The Deep                 65
     ##  9 Jewel                                  Foolish Games/You Were Meant Fo…    65
     ## 10 Carrie Underwood                       Before He Cheats                    64
+
+The Top 10 Most Popular Songs Since 1958
 
 ### Part B: Musical Diversity
 
