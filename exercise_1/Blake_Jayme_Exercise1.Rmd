@@ -1,0 +1,299 @@
+---
+title: "ECO 395M: Exercises 1"
+author: "Blake Lin and Jayme Gerring"
+date: "2/8/2022"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(rsample)  
+library(caret)
+library(modelr)
+library(parallel)
+library(foreach)
+
+ABIA <- read.csv("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercises-1/ABIA.csv")
+billboard <- read.csv("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercises-1/billboard.csv")
+olympics_top20 <- read.csv("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercises-1/olympics_top20.csv")
+sclass <- read.csv("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercises-1/sclass.csv")
+```
+
+## Problem 1: Data visualization: flights at ABIA
+
+```{r Q1,  message=FALSE, echo=FALSE}
+Time_of_Day_adjusted <- ABIA[,c("CRSDepTime","UniqueCarrier","ArrDelay")]
+
+#Created new variable that organizes time as different periods of the day
+Time_of_Day_adjusted <- Time_of_Day_adjusted %>%
+  mutate(TimeofDay =  ifelse(between(CRSDepTime, 0, 659), "Early Morning", ifelse(between(CRSDepTime, 700, 1159), "Morning", ifelse(between(CRSDepTime, 1200, 1759), "Afternoon", "Evening" ))))
+
+
+# Filtering Out by Top Five Carriers by number of flights
+TopTen <- ABIA %>%
+  count(UniqueCarrier, sort = TRUE)
+
+#Updating unique carrier labels to match to the airline they belong to
+Time_of_Day_adjusted <- Time_of_Day_adjusted %>%
+  filter(UniqueCarrier == "WN" | UniqueCarrier == "AA"| UniqueCarrier == "CO" | UniqueCarrier == "YV"|UniqueCarrier == "B6")
+
+#Key for changing unique carrier to airlines
+
+#WN = Southwest
+#AA= American
+#CO = Continental 
+#YV = Mesa Airlines (Code Shares with American and United)
+#B6 = Jet Blue
+
+#Add Carrier names based off of Unique Carrier Code
+Time_of_Day_adjusted <- Time_of_Day_adjusted %>% 
+  mutate(Carrier = ifelse(UniqueCarrier == "WN","Southwest", ifelse(UniqueCarrier == "AA", "American Airlines", ifelse(UniqueCarrier == "CO", "Continental", ifelse(UniqueCarrier == "YV", "Mesa Airlines", "Jet Blue" )))))
+
+#replace N/A values with zeros 
+Time_of_Day_adjusted[is.na(Time_of_Day_adjusted)] = 0
+
+
+#Find Average Arrival Delay, Grouped by Carrier and Departure time and create new data frame
+group_cols <- c("TimeofDay", "Carrier")
+Time_of_Day_adjusted_avgs<- Time_of_Day_adjusted %>% 
+  group_by(across(all_of(group_cols))) %>% 
+  summarize(mean_delay = mean(ArrDelay))
+
+# rearrange the x-axis by time
+Time_of_Day_adjusted_avgs$TimeofDay <- factor(Time_of_Day_adjusted_avgs$TimeofDay,levels = c("Early Morning", "Morning", "Afternoon", "Evening"))
+
+
+#plotting the data!!!!!
+  ggplot(Time_of_Day_adjusted_avgs, aes(TimeofDay, mean_delay)) + 
+    geom_bar(aes(fill = Carrier), stat = "identity", position = "dodge") + 
+    ggtitle("Best Time to Fly for On-Time Arrival") + 
+    labs(y = "Average Arrival Delay (min)", x = "Time of Day") +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+```
+
+
+It appears that the best time to fly would be an early morning flight on Jet Blue, however Jet Blue has the worst arrival delay among evening flights. In fact, it appears that almost all evening flights have some sort of delay and that early flights overall are the best choice to minimize delays. 
+
+
+
+ 
+
+## Problem 2: Wrangling the Billboard Top 100
+
+### Part A:The Top 10 Most Popular Songs Since 1958
+```{r  2A,  message=FALSE, echo=FALSE}
+#wrangling the data 
+top10_popular = billboard %>%
+  group_by(performer, song) %>%
+  summarize(count = max(weeks_on_chart))%>%
+  arrange(desc(count))
+
+#display requested table 
+head(top10_popular, 10)
+```
+
+The Top 10 Most Popular Songs Since 1958
+
+### Part B: Musical Diversity 
+```{r 2B,  message=FALSE, echo=FALSE}
+#Data Wrangling, getting songs organized by year 
+unique_songs = billboard %>%
+  filter(year>1958 & year<2021) %>%
+  group_by(year) %>%
+  summarize(songs_in_a_year=length(unique(song)))
+
+#Plotting the Data
+ggplot(unique_songs) + 
+  geom_line(aes(x=year, y=songs_in_a_year)) + 
+  ggtitle("Number of Unique Entries on the Hot 100") + 
+  labs(y = "Number of Entires", x = "Years",) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+```
+
+This graph shows the number of Hot 100 Entries from years 1958 to 2021. The slow decline of song diversity from ~1970 to an all time low in the early aughts is interesting, and you can clearly see the impact of iTunes and streaming starting around 2005. Maybe the decline in musical diversity in the 20th century could be attributed to a consolidation of genres in the zeitgeist. 
+  
+### Part C: Ten-Week Hit
+```{r 2C,  message=FALSE, echo=FALSE}
+tenweek_hit = billboard %>%
+  filter(weeks_on_chart>10) %>%
+  group_by(performer) %>%
+  filter(length(unique(song))>30) %>%
+  summarize(number_of_hits=length(unique(song)))
+           
+ ggplot(tenweek_hit) + 
+  geom_col(aes(fct_reorder(performer, number_of_hits), number_of_hits)) +
+  labs(x="Performer", y="Number of Hot 100 Entries",  title="Top 19 Performers in U.S. history") +
+  coord_flip() + 
+   theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+  
+```
+
+
+
+## Problem 3: Wrangling the Olympics
+
+### Part A
+```{r 3A, message=FALSE, echo=FALSE}
+# Filter to get female and Atheletics, and get the 95th percentile
+height_95pct = olympics_top20 %>%
+  filter(sex=="F" & sport=="Athletics") %>%
+  group_by(event) %>%
+  summarize(pct95_athletics = quantile(height, probs=0.95))
+  
+list(height_95pct)
+```
+ 
+
+ 
+### Part B
+```{r 3B, message=FALSE, echo=FALSE}
+
+greateset_variability = olympics_top20 %>%
+  filter(sex=="F") %>%
+  group_by(event) %>%
+  summarize(sd_height = sd(height))%>%
+  arrange(desc(sd_height))
+
+head(greateset_variability,1)
+
+```
+
+The women's event with the greatest variability in height was the Rowing Coxed Fours.
+
+
+ 
+
+### Part C
+```{r 3C, message=FALSE, echo=FALSE}
+
+# filter 
+avergae_age = olympics_top20 %>%
+  filter(sport=="Swimming") %>%
+  mutate(Sex = ifelse(sex == "M","Male", "Female")) %>%
+  group_by(year, Sex) %>%
+  summarize(avg_age = mean(age)) 
+
+# fit a plot of two lines 
+ggplot(avergae_age) +geom_line(aes(year, avg_age, color=Sex))+ 
+  ggtitle("Average Age in Swimming for Male and Female") +  labs(y = "Average Age", x = "Year") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  guides(color = guide_legend(reverse = TRUE, title="Sex"))
+
+```
+
+
+With a strange uptick in age in the men's event in the 1920's. It appears that the average age for men has trended upwards throughout the years, with the late teen/early twenties being the norm for most of the 20th century and mid-twenties being the norm in the 21st century. A similar pattern emerges in the women's event as well, with the mid-late teens being the norm for most of the 20th century, with a steep uptick in the late 20th century that put the average female age into the early 20's. An explanation for these upward trends could be that as healthcare and training methods improve, people are able to compete at the Olympic level for longer. Comparatively, it appears that the average age for men has trended very steadily while the average age for women has a steeper upward trend.
+
+
+
+## Problem 4: K-nearest neighbors
+
+```{r split the model, warning=FALSE, echo=FALSE}
+
+# filter to get two data frames for each trim
+trim350 = sclass %>%
+  filter(trim=="350")
+
+trim65AMG = sclass %>%
+  filter(trim=="65 AMG")
+
+# do train-test split for each set
+trim350_split =  initial_split(trim350, prop=0.8)
+trim350_train = training(trim350_split)
+trim350_test  = testing(trim350_split)
+
+trim65AMG_split =  initial_split(trim65AMG, prop=0.8)
+trim65AMG_train = training(trim65AMG_split)
+trim65AMG_test  = testing(trim65AMG_split)
+```
+
+#### For Trim 350
+```{r, echo=FALSE}
+#get rmse for k=1~100
+k_grid = 2:100
+
+rmse_350 = foreach(i=2:100, .combine='c') %do% {
+  knn = knnreg(price ~ mileage, data=trim350_train, k=i)
+  rmse(knn, trim350_test)
+}
+
+# plot with (x,y) = (k,rmse) across diff values of k, to find the optimal k
+df<-data.frame(k_grid,rmse_350) 
+ggplot(df, aes(x=k_grid,y=rmse_350)) + geom_line()+ 
+  ggtitle("Finding the Optimal K for Trim 350") +  labs(y = "RMSE", x = "K") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+
+Aftering balacning the biases, we dedcided to use 30 as the optimal k for trim 350
+```{r prediction plot, warning=FALSE, echo=FALSE}
+
+knn_350 = knnreg(price ~ mileage, data=trim350_train, k=30)
+
+# attach the predictions to the test data frame
+trim350_test = trim350_test %>%
+  mutate(price_pred = predict(knn_350, trim350_test))
+
+p_test = ggplot(data = trim350_test) + 
+  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2) + 
+  ggtitle("Predictions of Price given Mileage fro Trim 350") +  labs(y = "Price", x = "Mileage") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# now add the predictions
+p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
+
+```
+
+
+#### For Trim 65 AMG
+
+```{r, echo=FALSE}
+rmse_65 = foreach(i=2:100, .combine='c') %do% {
+  knn = knnreg(price ~ mileage, data=trim65AMG_train, k=i)
+  rmse(knn, trim65AMG_test)
+}
+
+# plot with (x,y) = (k,rmse) across diff values of k, to find the optimal k
+df1<-data.frame(k_grid,rmse_65) 
+ggplot(df1, aes(x=k_grid,y=rmse_65)) + geom_line() +
+  ggtitle("Finding the Optimal K for Trim 65 AMG") +  labs(y = "RMSE", x = "K") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+```
+
+
+Aftering balacning the biases, we dedcided to use 15 as the optimal k for trim 65 AMG
+
+```{r, plot trim 65AMG, echo=FALSE}
+
+knn_65 = knnreg(price ~ mileage, data=trim65AMG_train, k=15)
+
+# attach the predictions to the test data frame
+trim65AMG_test = trim65AMG_test %>%
+  mutate(price_pred = predict(knn_65, trim65AMG_test))
+
+p_test = ggplot(data = trim65AMG_test) + 
+  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2) + 
+  ggtitle("Prediction of Price given Mileage fro Trim 65 AMG") +  labs(y = "Price", x = "Mileage") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# now add the predictions
+p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
+```
+
+#### Which trim yields a larger optimal value of K?
+```{r larger K, message=FALSE, warning=FALSE, echo=FALSE}
+
+#See which trim has a larger data size
+nrow(filter(sclass, trim == "350")) 
+nrow(filter(sclass, trim == "65 AMG"))
+
+```
+
+Trim 350 has 416 observations and Trim 65 AMG has 292, Trim 350 has a larger data size so it can accommodate a larger K to get a smoother line without having too much bias in our prediction.
+
