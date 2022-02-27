@@ -84,7 +84,7 @@ It appears that the best time to fly would be an early morning flight on Jet Blu
 
 ## Problem 2: Wrangling the Billboard Top 100
 
-### Part A:The Top 10 Most Popular Songs
+### Part A:The Top 10 Most Popular Songs Since 1958
 ```{r  2A,  message=FALSE, echo=FALSE}
 #wrangling the data 
 top10_popular = billboard %>%
@@ -95,7 +95,9 @@ top10_popular = billboard %>%
 #display requested table 
 head(top10_popular, 10)
 ```
- 
+
+The Top 10 Most Popular Songs Since 1958
+
 ### Part B: Musical Diversity 
 ```{r 2B,  message=FALSE, echo=FALSE}
 #Data Wrangling, getting songs organized by year 
