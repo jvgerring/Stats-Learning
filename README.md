@@ -1,2 +1,2 @@
-# Stats-Learning
-Jayme's Stats Learning Projects
+# ECO 395M: Statistical Learning
+Jayme and Blake's Exercises
