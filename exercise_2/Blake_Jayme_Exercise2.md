@@ -1,6 +1,6 @@
 ## Problem 1: Data visualization: Capital Metro
 
-###Part A:
+### Part A:
 
 ![](Blake_Jayme_Exercise2_files/figure-markdown_strict/1A-1.png)
 
@@ -19,7 +19,7 @@ lasts until the following Monday. The near zero boardings one could
 expect on these days could be affecting the mean for Wed-Fri in
 November.
 
-###Part B
+### Part B
 
 ![](Blake_Jayme_Exercise2_files/figure-markdown_strict/1B-1.png)
 
