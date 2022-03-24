@@ -2,7 +2,7 @@
 
 ###Part A:
 
-![](Blake_Jayme_Ex2_files/figure-markdown_strict/1A-1.png)
+![](Blake_Jayme_Exercise2_files/figure-markdown_strict/1A-1.png)
 
 Average bus boardings per hour during the months of September through
 November, organized by weekday. During the workday, Mon-Fri, boardings
@@ -21,7 +21,7 @@ November.
 
 ###Part B
 
-![](Blake_Jayme_Ex2_files/figure-markdown_strict/1B-1.png)
+![](Blake_Jayme_Exercise2_files/figure-markdown_strict/1B-1.png)
 
 The figure shows a “heat-map” of average boardings during each hour of
 the day depending on temperature and sorted by weekday or weekend. Based
@@ -49,7 +49,7 @@ construction.
 
 ## Question 3
 
-![](Blake_Jayme_Ex2_files/figure-markdown_strict/Q3-1.png)
+![](Blake_Jayme_Exercise2_files/figure-markdown_strict/Q3-1.png)
 
     ##         (Intercept)            duration              amount         installment 
     ##               -0.42                0.02                0.00                0.25 
@@ -100,7 +100,7 @@ efficient than handpicking variables.
 Validate our best model by testing on the `hotels_dev` data, and
 generate the ROC curve of this prediction using threshold of 0.01 to 0.9
 
-![](Blake_Jayme_Ex2_files/figure-markdown_strict/Model%20Validation:%20Step%201-1.png)
+![](Blake_Jayme_Exercise2_files/figure-markdown_strict/Model%20Validation:%20Step%201-1.png)
 
 From the plot we can see that the optimal threshold to choose might be
 around 0.1 ~ 0.2.
@@ -113,7 +113,7 @@ sample to create random fold number 1 to 20 onto each data entry.
 For each fold, I stored the sum of predicted bookings and Actual
 bookings to see how well is this model performing.
 
-![](Blake_Jayme_Ex2_files/figure-markdown_strict/Model%20Validation:%20Step%202-1.png)
+![](Blake_Jayme_Exercise2_files/figure-markdown_strict/Model%20Validation:%20Step%202-1.png)
 
 We can see the expected numbers of bookings is only loosely following
 the actual numbers.
