@@ -1,0 +1,353 @@
+---
+title: "Blake_Jayme_Ex2"
+author: "Blake Lin"
+date: "3/7/2022"
+output: md_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(rsample)  
+library(caret)
+library(modelr)
+library(parallel)
+library(foreach)
+library(lubridate)
+library(gamlr)
+library(foreach)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1: Data visualization: Capital Metro
+
+###Part A: 
+
+```{r 1A,  message=FALSE, echo=FALSE}
+
+#reading in the CSV
+
+capmetro_UT <- read.csv("~/Documents/GitHub/ECO395M/data/capmetro_UT.csv")
+
+# Recode the categorical variables in sensible, rather than alphabetical, order
+capmetro_UT = mutate(capmetro_UT,
+                     day_of_week = factor(day_of_week,
+                                          levels=c("Mon", "Tue", "Wed","Thu", "Fri", "Sat", "Sun")),
+                     month = factor(month,
+                                    levels=c("Sep", "Oct","Nov")))
+
+#calculate averages based on group
+
+group_cols <- c("hour_of_day", "day_of_week", "month")
+capmetro_UT_Adjusted<- capmetro_UT %>% 
+  group_by(across(all_of(group_cols))) %>% 
+  summarize(mean_boarding = mean(boarding))
+
+#plotting the data!
+
+ggplot(data= capmetro_UT_Adjusted, aes(x= hour_of_day, y = mean_boarding, colour = month, group = month)) + 
+  geom_line() + facet_wrap(~day_of_week, scales='free') + 
+  scale_x_continuous(limits=c(6,21)) + scale_y_continuous(limits=c(0,160)) +
+  ggtitle("Average Boardings by Hour") + 
+  labs(y = "Average Boardings", x = "Hour") + 
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  guides(color = guide_legend(title="Month"))
+
+```
+
+
+Average bus boardings per hour during the months of September through November, organized by weekday. During the workday, Mon-Fri, boardings seem to peak consistently between the hours of 3-5PM. During the weekends, average boardings appear relatively flat with not one hour appearing more popular than the other. The lower average boardings on Mondays in September could be due to a number of reasons. The closing of the university on the first Monday in September due to Labor Day could be artificially bringing down the average for the month, because it's fathomable that there are close to 0 boardings on that day. Similarly, the averages for Wednesdays-Fridays in November seem to be affected by the Thanksgiving holiday, which typically begins on a Wednesday and lasts until the following Monday. The near zero boardings one could expect on these days could be affecting the mean for Wed-Fri in November. 
+
+
+###Part B
+
+```{r 1B,  message=FALSE, echo=FALSE}
+
+#Adding a variable for minute intervals
+capmetro_UT = mutate(capmetro_UT, intervals = 60*hour(timestamp) + minute(timestamp))
+
+ggplot(capmetro_UT, aes(x = temperature , y = boarding  , color = weekend,
+               shape = weekend)) + 
+  geom_point(size = 2) + facet_wrap(~hour_of_day, scales = 'free') + 
+  scale_x_continuous(limits=c(0,98)) + 
+  scale_y_continuous(limits=c(0,290)) +
+  ggtitle("Boardings By Temperature and Hour") +
+  labs(y = "Boardings", x = "Temperature (ºF)") + 
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  scale_shape_discrete(labels = c("Weekday", "Weekend")) +
+  scale_colour_discrete(labels = c("Weekday", "Weekend")) +
+  labs(shape = "Day of the Week", colour = "Day of the Week")
+  
+```
+
+The figure shows a "heat-map" of average boardings during each hour of the day depending on temperature and sorted by weekday or weekend. Based on the figures above, there doesn't appear to be any evidence that suggests that UT students ride the bus more or less because of temperature, but the time of day does seem to have an impact with the mid-day being the most frequented time. 
+
+## Problem 2: Saratoga House Prices
+
+```{r Number 2, echo=FALSE, include=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggplot2)
+library(rsample)  
+library(caret)
+library(modelr)
+library(parallel)
+library(foreach)
+library(mosaic)
+library(class)
+library(lattice)
+set.seed(123)
+
+# Data Wrangling 
+
+#importing data
+data(SaratogaHouses)
+
+#split the data
+saratoga_split = initial_split(SaratogaHouses, prop = 0.8)
+saratoga_train = training(saratoga_split)
+saratoga_test = testing(saratoga_split)
+
+#Normalize
+ 
+Xtrain = model.matrix(~ . - (price +sewer + waterfront + landValue + newConstruction) - 1, data=saratoga_train)
+Xtest = model.matrix(~ . - (price+ sewer + waterfront + landValue + newConstruction) - 1, data=saratoga_test)
+
+# training and testing set responses
+ytrain = saratoga_train$price
+ytest = saratoga_test$price
+
+ #now rescale:
+ scale_train = apply(Xtrain, 2, sd)  # calculate std dev for each column
+ Xtilde_train = scale(Xtrain, scale = scale_train)
+ Xtilde_test = scale(Xtest, scale = scale_train)  # use the training set scales!
+
+
+# Fit the full model 
+full.model <- lm(price ~., data = saratoga_train)
+
+# Stepwise regression model
+
+step.model <- step(full.model, direction = c("both"))
+
+step.model = lm(price ~ lotSize + age + landValue + livingArea + bedrooms + bathrooms + rooms  + 
+                  heating + waterfront + newConstruction + centralAir, data = saratoga_train)
+
+lm_medium = lm(price ~ lotSize + age + livingArea + pctCollege + bedrooms + 
+                 fireplaces + bathrooms + rooms + heating + fuel + centralAir, data= saratoga_train)
+
+rmse(lm_medium,saratoga_test)
+
+#get simulated RSME
+
+rmse_knn = do(10)*{
+  #split the data
+  saratoga_split = initial_split(SaratogaHouses, prop = 0.8)
+  saratoga_train = training(saratoga_split)
+  saratoga_test = testing(saratoga_split)
+  
+  lm_medium = lm(price ~ lotSize + age + livingArea + pctCollege + bedrooms + 
+                   fireplaces + bathrooms + rooms + heating + fuel + centralAir, data= saratoga_train)
+  
+  step.model = lm(price ~ lotSize + age + landValue + livingArea + bedrooms + bathrooms + rooms  + 
+                    heating + waterfront + newConstruction + centralAir, data = saratoga_train)
+  
+  model_errors = c(rmse(lm_medium, saratoga_test), rmse(step.model,saratoga_test))
+  
+  model_errors
+   }
+  
+
+#KNN MODEL
+rmse_knn = do(10)*{
+  #split the data
+  saratoga_split = initial_split(SaratogaHouses, prop = 0.8)
+  saratoga_train = training(saratoga_split)
+  saratoga_test = testing(saratoga_split)
+  
+  #Normalize
+  
+  Xtrain = model.matrix(~ . - (price +sewer + waterfront + landValue + newConstruction) - 1, data=saratoga_train)
+  Xtest = model.matrix(~ . - (price+ sewer + waterfront + landValue + newConstruction) - 1, data=saratoga_test)
+  
+  # training and testing set responses
+  ytrain = saratoga_train$price
+  ytest = saratoga_test$price
+  
+  #now rescale:
+  scale_train = apply(Xtrain, 2, sd)  # calculate std dev for each column
+  Xtilde_train = scale(Xtrain, scale = scale_train)
+  Xtilde_test = scale(Xtest, scale = scale_train)  # use the training set scales!
+  
+  #run the KNN model
+  ctrl <- trainControl(method="repeatedcv", number = 10, repeats = 3)
+  knnfit <- train(Xtilde_train,
+                   ytrain,
+                   method = "knn",
+                   trControl = ctrl,
+                   tunelenth = 10)
+  #knnfit
+  
+  y_predict <- predict(knnfit, Xtilde_test)
+  
+  
+  knn_errors = c(RMSE(ytest, y_predict))
+  
+}
+
+finalKNNrmse = colMeans(rmse_knn)
+
+
+```
+The linear model which outperformed the medium linear model is: price = lotSize + age + landValue + livingArea + bedrooms + bathrooms + rooms  + heating + waterfront + newConstruction + centralAir  which was found using Stepwise regression.
+
+Using a cross validated RMSE, we found that the linear medium model had an RMSE of 69966 and our chosen linear model had an RMSE of 63280. The KNN model had  a RMSE of 69919 which was selected using repeated cross validation and then refit to the testing set. This means our chosen linear model was the best at predicting market values for properties in Saratoga. For a taxing authority it's clear that there are important factors in determining property value compared to the medium model: Land Value, Waterfront Property, and finally whether or not a house was a new construction. 
+
+
+
+## Question 3 
+```{r Q3, echo=FALSE, warning=FALSE}
+german_credit <- read.csv("~/Documents/GitHub/ECO395M/data/german_credit.csv")
+
+# compute the average default rate in every group
+default_prob = german_credit %>% 
+  group_by(history) %>%
+  summarize(avg_default_prob = mean(Default))
+
+# making the plot"default probability by history"
+ggplot(default_prob, aes(history, avg_default_prob)) + geom_bar(stat = "identity") + 
+  labs(y = "Default Probability", x = "Class of Credit History", title = "Default Probability by Credit History") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# split the train/test data
+credit_split =  initial_split(german_credit, prop=0.8)
+credit_train = training(credit_split)
+credit_test  = testing(credit_split)
+
+# building the model 
+logit_default = glm(Default~duration + amount + installment + age + history + purpose + foreign, data = credit_train, family = binomial)
+
+coef(logit_default) %>% round(2)
+
+```
+The coefficients of poor and terrible history are the opposite of what people would expect, this negative number means people with worse credit history are less likely to default.  
+
+The bar plot seems to suggest that these results are coming directly from the data set. 
+
+It seems that by choosing to only have a sample of loans that defaulted, the bank isn’t able to accurately predict who will default. Since the sample is full of defaulted loans, it’s hard to draw conclusions on what makes a successful borrower and vise versa.  It would make more sense for the bank to have a random sample of loans that both defaulted and didn’t default to better predict defaults.
+
+
+
+## Question 4 
+### Model Building 
+
+
+```{r 4 baseline models, echo=FALSE, warning=FALSE}
+hotels_dev<- read.csv("~/Documents/GitHub/ECO395M/data/hotels_dev.csv")
+hotels_val<- read.csv("~/Documents/GitHub/ECO395M/data/hotels_val.csv")
+
+## split the "dev" data
+hotel_dev_split = initial_split(hotels_dev, prop = 0.8)
+hotel_dev_train = training(hotel_dev_split)
+hotel_dev_test = testing(hotel_dev_split)
+
+# Model Building 
+## baseline 1
+hotel_baseline1 = glm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = hotel_dev_train, family = binomial)
+
+## baseline 2
+hotel_baseline2 = glm(children ~ .-arrival_date , data = hotel_dev_train, family = binomial)
+
+```
+
+
+First, we will train/split the data, then build the baseline models 1 and 2.
+We attempted to get the best model by looking at the p-value of each coefficients, and by exploring the interaction terms.
+
+
+```{r 4 best model, echo=FALSE}
+hotel_best = glm(children ~ . - arrival_date + stays_in_weekend_nights:distribution_channel + is_repeated_guest:distribution_channel + adults:is_repeated_guest +  adults:stays_in_weekend_nights + stays_in_weekend_nights:customer_type + customer_type:adults, data = hotel_dev_train, family = binomial)
+
+# the out of sample performance for model 1 and 2: setting the t as 0.15
+#for model 1
+phat_baseline1 = predict(hotel_baseline1, hotel_dev_test, type = "response")
+yhat_baseline1 = ifelse(phat_baseline1>0.3, 1, 0)
+confusion_baseline1 = table(y = hotel_dev_test$children, yhat = yhat_baseline1)
+
+#for model 2
+phat_baseline2 = predict(hotel_baseline2, hotel_dev_test, type = "response")
+yhat_baseline2 = ifelse(phat_baseline2>0.3, 1, 0)
+confusion_baseline2 = table(y = hotel_dev_test$children, yhat = yhat_baseline2)
+
+#for the best model
+phat_best = predict(hotel_best, hotel_dev_test, type = "response")
+yhat_best = ifelse(phat_best>0.3, 1, 0)
+confusion_best = table(y = hotel_dev_test$children, yhat = yhat_best)
+```
+After fitting the best model, we create the confusion matrix to compare the out of sample performance of the models.
+
+Below are the accuracy of the models, baseline1, baseline2, best model respectively:
+note that our "best model" is still performing slightly worse than the baseline2 model, I might want to try something more efficient than handpicking variables.
+
+```{r output confusion, echo=FALSE}
+round(sum(diag(confusion_baseline1))/sum(confusion_baseline1) * 100, 2)
+round(sum(diag(confusion_baseline2))/sum(confusion_baseline2) * 100, 2)
+round(sum(diag(confusion_best))/sum(confusion_best) * 100, 2)
+```
+
+
+### Model Validation: Step 1
+Validate our best model by testing on the `hotels_dev` data, and generate the ROC curve of this prediction using threshold of 0.01 to 0.9
+
+```{r Model Validation: Step 1, echo=FALSE}
+# validate our best model using the fresh val data
+phat_best_val = predict(hotel_best, hotels_val, type = "response")
+
+# plot the roc curve
+t = rep(1:90)/100
+
+roc_plot = foreach(t = t, .combine='rbind')%do%{
+  yhat_best_val = ifelse(phat_best_val >= t, 1, 0)
+  confusion_best_val = table(y=hotels_val$children, yhat=yhat_best_val)
+  TPR = confusion_best_val[2,2]/(confusion_best_val[2,2]+confusion_best_val[2,1])
+  FPR = confusion_best_val[1,2]/(confusion_best_val[1,1]+confusion_best_val[1,2]) 
+  c(t=t, TPR = TPR, FPR = FPR)
+} %>% as.data.frame()
+
+ggplot(roc_plot) +
+  geom_line(aes(x=FPR, y=TPR)) +
+  labs(y="True Positive Rate", x = "False Positive Rate", title = "ROC Curve for the Best Model")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+From the plot we can see that the optimal threshold to choose might be around 0.1 ~ 0.2.
+
+
+### Model Validation: Step 2
+
+Do 20 folds cross validation using the `hotels_dev` data, and I used sample to create random fold number 1 to 20 onto each data entry.
+
+For each fold, I stored the sum of predicted bookings and Actual bookings to see how well is this model performing.
+
+```{r Model Validation: Step 2, echo=FALSE, warning=FALSE}
+
+hotel_cv = hotels_val %>%
+  mutate(fold = rep(1:20, length=nrow(hotels_val))%>%sample())
+
+hotel_cv = foreach(i = 1:20, .combine='rbind')  %do% {
+  hotel_cv_test = filter(hotel_cv, fold == i)
+  hotel_cv_train = filter (hotel_cv, fold != i)
+  hotel_cv_model = glm(children ~ .+ stays_in_weekend_nights:distribution_channel + is_repeated_guest:distribution_channel + adults:is_repeated_guest +  adults:stays_in_weekend_nights + stays_in_weekend_nights:customer_type + customer_type:adults, data = hotel_cv_train[,!colnames(hotel_cv_train)%in% c("arrival_date")], family = binomial)
+  hotel_cv_phat = predict(hotel_cv_model, hotel_cv_test, type = "response")
+  c(y=sum(hotel_cv_test$children), y_hat=sum(hotel_cv_phat), fold =i)
+} %>% as.data.frame()
+
+ggplot(hotel_cv) +
+  geom_line(aes(x=fold, y=y, color = "Actual")) +
+  geom_line(aes(x=fold, y=y_hat, color = "Expected")) +
+  labs(y="Numbers of Bookings", x = "Fold", title = "Actual vs. Expected number of bookings With Children")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  guides(color = guide_legend(title=""))
+
+```
+
+We can see the expected numbers of bookings is only loosely following the actual numbers.
