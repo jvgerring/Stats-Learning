@@ -1,2 +1,2 @@
-# ECO395M_Exercis2
-Blake(Pin-Yun) and Jayme's hw
+# ECO395M_Exercise 2
+Blake(Pin-Yun) and Jayme's Exercise 2
