@@ -1,0 +1,40 @@
+---
+title: "Jayme_Blake_Exercise3"
+author: "Jayme Gerring and Blake (Pin-Yun) Lin"
+date: "3/24/2022"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Problem 1: What Causes What?
+
+1. There's a causality problem, it's hard to come to a clear conclusion just by looking at police force size. Cities with higher than average crime rate might hire more police than an average city, this might lead to a false conclusion that police are ineffective at soliving crime. On the other hand, having more police means that crime gets more easily detected, this might lead someone to conclude crime rates are higher when in fact that might be the same as any other city with a smaller police force. Simply put, it's hard to conclude what effect increased policing has on crime. 
+
+2. Basically, the researchers added an IV variable by using the terror alert system. High Terror alert means that there will be an increased police presence regardless of the amount of crime that's happening in a given area. In their first regression they found that a high terror alert is predicted to lower the number of crime by about 7 crimes. In the second regression, controlling for metro ridership, the high terror alert is predicted to lower the crime rate by about 6 crimes.\
+
+3. The researchers decided to control for metro ridership to make sure that the lower crime rate caused by the high terror rate wasn't simply a matter of a smaller amount of people being out and about on the street. The researchers were trying to capture the effect that a high terror rate could have on the amount of people in the city. 
+
+4. The first column comprises of a linear model using robust regression with three coefficients. One of the coefficients looks at the effect of a high terror rate soley within the first police district area, meaning the national mall. This is because if terrorists were to attack Washington, D.C. they would probably focus on this area. The next coefficient is the effect of the high alert on the rest of the police district areas within DC. The third coeffiecnt is the log of midday metro ridership. Basically this regression is showing that the high alert (and therefore an increased number of police) lowers crime mostly in the National Mall area, the effect in the rest of the city isn't as profound as it is in the other area, even though it still lowers crime by a small amount. However, the regression still shows strong evidence that more police lowers crime, this is because during a high alert the DC police force is probably going to increase police the most in district one. 
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
