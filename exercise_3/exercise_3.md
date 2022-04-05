@@ -50,7 +50,7 @@
 The model above shows the un-pruned CART Tree, we will proceed to prune
 and then calculate RMSE.
 
-    ## 28.88963  RMSE for Pruned CART Model
+    ## 34.31931  RMSE for Pruned CART Model
 
 ### Part 2: Random Forest
 
@@ -59,19 +59,19 @@ and then calculate RMSE.
 This plot shows the out of bag MSE as a function of the number of trees
 used. Let’s proceed to look at the RMSE compared to the testing set.
 
-    ## 23.8701  RMSE for Random Forest
+    ## 29.95216  RMSE for Random Forest
 
 ### Part 3: Gradient Boosted Trees
 
 ![](exercise_3_files/figure-markdown_strict/2%20boosted%20-1.png)
 
-    ## [1] 48
+    ## [1] 50
 
-This plot shows the error curve of the Gradient Boosted Model. Along
-with the optimal number of trees listed as output. Let’s now check the
-RMSE for the Gradient Boosted Trees Model.
+This plot shows the error curve of the Gradient Boosted Model, with the
+optimal number of trees listed as output. Let’s now check the RMSE for
+the Gradient Boosted Trees Model.
 
-    ## 24.89892  RMSE for Gradient Boosted Trees
+    ## 31.1591  RMSE for Gradient Boosted Trees
 
 Looking at the RMSE results from the three models, it appears that
 random forest would be the best choice for this particular set of data.
