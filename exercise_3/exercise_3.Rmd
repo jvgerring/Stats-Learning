@@ -7,6 +7,13 @@ output: md_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+library(rsample) 
+library(modelr)
+library(randomForest)
+library(gbm)
 ```
 ## Problem 1: What Causes What?
 
@@ -16,25 +23,121 @@ knitr::opts_chunk$set(echo = TRUE)
 
 3. The researchers decided to control for metro ridership to make sure that the lower crime rate caused by the high terror rate wasn't simply a matter of a smaller amount of people being out and about on the street. The researchers were trying to capture the effect that a high terror rate could have on the amount of people in the city. 
 
-4. The first column comprises of a linear model using robust regression with three coefficients. One of the coefficients looks at the effect of a high terror rate soley within the first police district area, meaning the national mall. This is because if terrorists were to attack Washington, D.C. they would probably focus on this area. The next coefficient is the effect of the high alert on the rest of the police district areas within DC. The third coefficient is the log of midday metro ridership. Basically this regression is showing that the high alert (and therefore an increased number of police) lowers crime mostly in the National Mall area, the effect in the rest of the city isn't as profound as it is in the other area, even though it still lowers crime by a small amount. However, the regression still shows strong evidence that more police lowers crime, this is because during a high alert the DC police force is probably going to increase police the most in district one. 
+4. The first column comprises of a linear model using robust regression with three coefficients. One of the coefficients looks at the effect of a high terror rate solely within the first police district area, meaning the national mall. This is because if terrorists were to attack Washington, D.C. they would probably focus on this area. The next coefficient is the effect of the high alert on the rest of the police district areas within DC. The third coefficient is the log of midday metro ridership. Basically this regression is showing that the high alert (and therefore an increased number of police) lowers crime mostly in the National Mall area, the effect in the rest of the city isn't as profound as it is in the other area, even though it still lowers crime by a small amount. However, the regression still shows strong evidence that more police lowers crime, this is because during a high alert the DC police force is probably going to increase police the most in district one. 
 
+## Problem 2 Tree Modeling: Dengue Cases
 
-## R Markdown
+### Part 1: CART
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r 2, message=FALSE, echo=FALSE}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#load in data 
+dengue = read.csv('/Users/jaymegerring/Downloads/GitHub/ECO395M-1/data/dengue.csv')
 
-```{r cars}
-summary(cars)
+#fixing na values 
+dengue <- na.exclude(dengue)
+dengue$city = dengue$city %>% factor()
+dengue$season = dengue$season %>% factor()
+
+#create a testing and training set
+dengue_split = initial_split(dengue, prop = 0.9)
+dengue_train = training(dengue_split)
+dengue_test = testing(dengue_split)
+
+#creating the tree, CART model
+
+dengue_tree = rpart(total_cases ~ ., data = dengue_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+
+rpart.plot(dengue_tree, digits=-5, type=4, extra=1)
 ```
 
-## Including Plots
+The model above shows the un-pruned CART Tree, we will proceed to prune and then calculate RMSE.
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+``` {r 2 cont , message=FALSE, echo=FALSE}
+# this function actually prunes the tree at that level
+prune_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  prune(my_tree, cp=cp_opt)
+}
+
+#lets prune to make sure we have the best model
+prune_dengue_tree = prune_1se(dengue_tree)
+
+#checking
+rmse_CART = rmse(prune_dengue_tree, dengue_test)
+
+cat(rmse_CART,' RMSE for Pruned CART Model') 
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Part 2: Random Forest
+``` {r 2 cont again , message=FALSE, echo=FALSE}
+#random forest
+
+DengueRandom = randomForest(total_cases ~ ., data= dengue_train, importance = TRUE)
+
+plot(DengueRandom)
+
+
+```
+
+This plot shows the out of bag MSE as a function of the number of trees used. Let's proceed to look at the RMSE compared to the testing set.
+
+
+``` {r 2 random conclusion, message=FALSE, echo=FALSE}
+
+rmse_random = rmse(DengueRandom, dengue_test)
+
+cat(rmse_random,' RMSE for Random Forest')
+```
+
+### Part 3: Gradient Boosted Trees
+
+``` {r 2 boosted , message=FALSE, echo=FALSE}
+
+#boosted trees
+DengueBoost = gbm(total_cases ~ ., data= dengue_train,
+             interaction.depth=4, n.trees=350, shrinkage=.05, cv.folds = 10, 
+             distribution='gaussian')
+
+gbm.perf(DengueBoost)
+
+```
+
+This plot shows the error curve of the Gradient Boosted Model. Along with the optimal number of trees listed as output. Let's now check the RMSE for the Gradient Boosted Trees Model. 
+
+
+``` {r 2 boosted conclusion, message=FALSE, echo=FALSE}
+
+#checking
+rmse_boosted = rmse(DengueBoost, dengue_test) 
+
+cat(rmse_boosted,' RMSE for Gradient Boosted Trees') 
+
+```
+
+Looking at the RMSE results from the three models, it appears that random forest would be the best choice for this particular set of data. The next section shows the partial dependency plots for the Random Forest Model. 
+
+### Part 4: Partial Dependency Plots
+``` {r 2 PD plots, message=FALSE, echo=FALSE}
+#pd plots
+partialPlot(DengueRandom, dengue_test, 'specific_humidity', las=1)
+
+partialPlot(DengueRandom, dengue_test, 'precipitation_amt', las=1)
+
+partialPlot(DengueRandom, dengue_test, 'tdtr_k', las=1)
+
+
+```
+
+### Wrap Up: 
+
+Looking at the PD plots, most seem to make sense in the context of the science of mosquito breeding. Mosquitos require standing water in order to make baby mosquitos, it makes sense that as precipitation increases, the number of mosquitos increases, the increased number of mosquitos leads to more cases of Dengue. The same seems to be true of humidity. Humidity is a measure of how much evaporated moisture there is in the air, higher humidity would seem to indicate that there is a higher amount of water on the ground, and thus the amount of mosquito breeding grounds. Our wild card PD plot looks at the Average Diurnal Temperature Range. It shows that as DTR increases, the amount of predicted Dengue cases decreases. This makes sense as well, it's possible that temperature shocks kill mosquitos which leads to less Dengue cases. 
+
+
+
+
