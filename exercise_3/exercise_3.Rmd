@@ -108,7 +108,7 @@ gbm.perf(DengueBoost)
 
 ```
 
-This plot shows the error curve of the Gradient Boosted Model. Along with the optimal number of trees listed as output. Let's now check the RMSE for the Gradient Boosted Trees Model. 
+This plot shows the error curve of the Gradient Boosted Model, with the optimal number of trees listed as output. Let's now check the RMSE for the Gradient Boosted Trees Model. 
 
 
 ``` {r 2 boosted conclusion, message=FALSE, echo=FALSE}
