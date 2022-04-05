@@ -7,6 +7,23 @@ output: md_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+## hint r script: glass, tree_example, random_forest, hockey
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+library(rsample) 
+library(rsample) 
+library(randomForest)
+library(lubridate)
+library(modelr)
+library(gbm)
+
+
+greenbuildings = read.csv("~/Documents/GitHub/ECO395M/data/greenbuildings.csv", header=TRUE)
+CAhousing = read.csv("~/Documents/GitHub/ECO395M/data/CAhousing.csv", header=TRUE)
+dengue = read.csv("~/Documents/MA Courses/Data Mining/Stats-Learning/exercise_3/data/dengue.csv", header=TRUE)
+
 ```
 ## Problem 1: What Causes What?
 
@@ -19,22 +36,117 @@ knitr::opts_chunk$set(echo = TRUE)
 4. The first column comprises of a linear model using robust regression with three coefficients. One of the coefficients looks at the effect of a high terror rate soley within the first police district area, meaning the national mall. This is because if terrorists were to attack Washington, D.C. they would probably focus on this area. The next coefficient is the effect of the high alert on the rest of the police district areas within DC. The third coefficient is the log of midday metro ridership. Basically this regression is showing that the high alert (and therefore an increased number of police) lowers crime mostly in the National Mall area, the effect in the rest of the city isn't as profound as it is in the other area, even though it still lowers crime by a small amount. However, the regression still shows strong evidence that more police lowers crime, this is because during a high alert the DC police force is probably going to increase police the most in district one. 
 
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+## Problem 3 Predictive model building: green certification
+
+
+
+```{r Q3 CART}
+
+# DO i want to prune this tree?
+# create the revenue per per square foot variable 
+greenbuildings = mutate(greenbuildings, revenue = Rent * leasing_rate)
+
+# split data into training and testing
+set.seed(100)
+green_split =  initial_split(greenbuildings, prop=0.8)
+green_train = training(green_split)
+green_test  = testing(green_split)
+
+# let's fit a single tree
+green.tree = rpart(revenue ~ . - LEED - Energystar - cd_total_07 - hd_total07 - leasing_rate - Rent, data=greenbuildings, control = rpart.control(cp = 0.00001), na.action=na.omit)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+```{r Q3 random forest}
+
+# now a random forest
+# notice: no tuning parameters!  just using the default
+# downside: takes longer because we're fitting hundreds of trees (500 by default)
+# the importance=TRUE flag tells randomForest to calculate variable importance metrics
+green.forest = randomForest(revenue ~ . - LEED - Energystar - cd_total_07 - hd_total07- leasing_rate - Rent, data=greenbuildings, na.action=na.omit, importance = TRUE)
+
+
+# boosting 
+green.boost = gbm(revenue ~ . - LEED - Energystar - cd_total_07 - hd_total07- leasing_rate - Rent, data=greenbuildings, interaction.depth=5, n.trees=500, shrinkage=.05)
+
+# compare RMSE 
+rmse(green.tree, green_test)
+rmse(green.forest, green_test) 
+rmse(green.boost, green_test) 
+
+
+# details of Random forest
+# shows out-of-bag MSE as a function of the number of trees used
+plot(green.forest)
+
+# variable importance measures
+# how much does mean-squared error increase when we ignore a variable?
+vi = varImpPlot(green.forest, type=1)
+
+# partial dependence plots
+# these are trying to isolate the partial effect of specific features
+# on the outcome
+partialPlot(green.forest, green_test, 'green_rating', las=1)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r Q4}
+# PLOT1 original data
+ggplot(CAhousing) + 
+  geom_point(aes(x=longitude, y=latitude, color=medianHouseValue)) + 
+  scale_color_continuous(type = "viridis")
+
+# choose the best model  
+# split data into training and testing:    
+set.seed(101)
+ca_split =  initial_split(CAhousing, prop=0.8)
+ca_train = training(ca_split)
+ca_test  = testing(ca_split)
+
+# fit a single tree
+ca.tree = rpart(medianHouseValue ~ . , data=CAhousing, control = rpart.control(cp = 0.00001))
+
+# random forest 
+ca.forest = randomForest(medianHouseValue ~ . , data=CAhousing, control = rpart.control(cp = 0.00001), importance=TRUE)
+
+# boosting 
+ca.boost = gbm(medianHouseValue ~ ., data = ca_train ,interaction.depth=5, n.trees=800, shrinkage=.25)
+
+# OPTIONAL: tuning, how to choose # of trees and shrinkage, explaining?
+gbm.perf(ca.boost)
+yhat_test_gbm = predict(ca.boost, ca_test, n.trees=350)
+
+
+# the model we choose here is: random forest for now 
+rmse(ca.tree, ca_test)
+rmse(ca.forest, ca_test)
+rmse(ca.boost, ca_test)
+
+# PLOT2: prediction 
+CAhousing = CAhousing %>%
+  mutate(ca_pred = predict(ca.forest, ca_test))
+
+ggplot(CAhousing) + 
+  geom_point(aes(x=longitude, y=latitude, color=ca_pred)) + 
+  scale_color_continuous(type = "viridis")
+
+# PLOT3: residual
+CAhousing = CAhousing %>%
+  mutate(ca_resid = sqrt((medianHouseValue-ca_pred)^2))
+
+ggplot(CAhousing) + 
+  geom_point(aes(x=longitude, y=latitude, color=ca_resid)) + 
+  scale_color_continuous(type = "viridis")+
+  labs(title = "Residuals versus longitude and latitude")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  guides(color = guide_legend(title="Residual"))
+
+```
+
