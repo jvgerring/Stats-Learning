@@ -81,11 +81,11 @@ kable(data_frame_mod[1:15, ], caption = "Rules with lift over 10")
   
   {instant food products, soda} -> hamburger meat 
   
-This rule has the highest lift of all the rules we found with 18.998 lift, and may indicate people     buying products for cookouts.
+This rule has the highest lift of all the rules we found with 18.998 lift, and may indicate people buying products for cookouts.
   
   {liquor, red/blush wine} -> bottled beer
   
-  This rule makes sense for parties. This rule also has a very high confidence of 0.9047619.
+  This rule makes sense for parties, it also has a very high confidence of 0.9047619.
   
   {popcorn, soda} -> salty snack 
   
@@ -95,7 +95,7 @@ This rule has the highest lift of all the rules we found with 18.998 lift, and m
   
   {Instant food products, whole milk} -> hamburger meat 
   
-  This rule may be comprised of people buying the ingredients for the American household staple Hamburger   Helper, which requires boxed (instant) Hamburger Helper mix, milk, and hamburger meat. 
+  This rule may be comprised of people buying the ingredients for the American household staple Hamburger Helper, which requires instant Hamburger Helper mix, milk, and hamburger meat. 
   
 ## Graphs
 

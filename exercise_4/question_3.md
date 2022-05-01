@@ -209,8 +209,8 @@ lift, and may indicate people buying products for cookouts.
 
 {liquor, red/blush wine} -&gt; bottled beer
 
-This rule makes sense for parties. This rule also has a very high
-confidence of 0.9047619.
+This rule makes sense for parties, it also has a very high confidence of
+0.9047619.
 
 {popcorn, soda} -&gt; salty snack
 
@@ -222,8 +222,8 @@ movie nights
 {Instant food products, whole milk} -&gt; hamburger meat
 
 This rule may be comprised of people buying the ingredients for the
-American household staple Hamburger Helper, which requires boxed
-(instant) Hamburger Helper mix, milk, and hamburger meat.
+American household staple Hamburger Helper, which requires instant
+Hamburger Helper mix, milk, and hamburger meat.
 
 ## Graphs
 
