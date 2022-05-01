@@ -1,0 +1,125 @@
+---
+title: "Question_3"
+author: "Jayme Gerring"
+date: "4/30/2022"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(arules) 
+library(arulesViz)
+library(igraph)
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 3 
+### Association rules for grocery purchases
+
+  Initially, it seemed like the best option to include relatively high thresholds for both support and confidence. This approach seems to make sense, because support can tell us what rules are worth exploring further. However, when using a minimum support threshold of .005 and confidence of .5 we didn't seem to get very show-stopping results. Simply put, we basically determined that people buy whole milk and "other vegetables" when they buy other items. Given the sheer popularity of milk and vegetables, this isn't a very compelling or interesting result. Max item length was set at 10, this is because people typically purchase a lot of items at once when grocery shopping, and we didn't want to miss any potentially interesting combinations. 
+
+  The confidence threshold was set at .5, which may seem high, but setting confidence higher was done to offset the "milk" factor and to truly extract surprising results. Because milk is such popular item, many rules that involve milk and another item will have high confidence even if the lift isn't very high. 
+
+  After the disappointing results using .005 minimum support, we adjusted our minimum support to be .001 while keeping confidence and max item length the same. After extracting the rules, we looked at rules with a lift > 10 and this resulted in some interesting, but not entirely surprising associations. 
+
+**The 15 rules with lift greater than 10 are listed below:**
+
+
+```{r 3A, results = FALSE, message=FALSE, echo=FALSE}
+
+#import data, tab delimited text file
+raw_groceries <- read.table("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercise_4/groceries.txt", 
+                            sep = '\t', header = F)
+
+#add a numbered variable to keep track of baskets
+raw_groceries <- raw_groceries %>%
+ add_column(Basket_Number= NA) 
+raw_groceries$Basket_Number <- 1:nrow(raw_groceries) 
+
+#rename first variable
+raw_groceries <- rename(raw_groceries, Customer = V1)
+
+raw_groceries$Basket_Number = factor(raw_groceries$Basket_Number)
+
+#commas into individual items
+groceries = strsplit(raw_groceries$Customer, ",")
+
+groceries$Customer = factor(groceries$Customer)
+
+
+# Remove duplicates ("de-dupe")
+# lapply says "apply a function to every element in a list"
+# unique says "extract the unique elements" (i.e. remove duplicates)
+groceries = lapply(groceries, unique)
+
+grocerytrans = as(groceries, "transactions")
+
+groceryrules = apriori(grocerytrans, 
+                     parameter=list(support=.001, confidence=.5, maxlen=10))
+
+grocrules_df <- arules::DATAFRAME(groceryrules)
+
+data_frame_mod <- filter(grocrules_df,lift>10)
+
+sub1 = subset(groceryrules, subset = confidence > 0.01 & support > 0.005)
+
+saveAsGraph(sub1, file = "groceryrules.graphml")
+```
+
+```{r 3B, message=FALSE, echo=FALSE}
+kable(data_frame_mod[1:15, ], caption = "Rules with lift over 10")
+```
+
+  **Looking at many of the rules, it's clear that some are compliments such as:**
+  
+  {ham, processed cheese} -> white bread 
+  
+  {baking powder, flour} -> sugar
+  
+  **Other rules might not initially seem like complements, but have clear associations with each other. The rule with the highest lift seems to come from people planning parties or cookouts:**
+  
+  {instant food products, soda} -> hamburger meat 
+  
+This rule has the highest lift of all the rules we found with 18.998 lift, and may indicate people     buying products for cookouts.
+  
+  {liquor, red/blush wine} -> bottled beer
+  
+  This rule makes sense for parties. This rule also has a very high confidence of 0.9047619.
+  
+  {popcorn, soda} -> salty snack 
+  
+  This rule makes sense because people buy these items for parties and movie nights
+  
+  **Finally, the most amusing rule may be:**
+  
+  {Instant food products, whole milk} -> hamburger meat 
+  
+  This rule may be comprised of people buying the ingredients for the American household staple Hamburger   Helper, which requires boxed (instant) Hamburger Helper mix, milk, and hamburger meat. 
+  
+## Graphs
+
+Below are some plots illustrating the ruleset created in the first part of the question.
+
+Plot 1 shows rules organized by support and lift, with shade intensity representing confidence.
+
+Plot 2 shows rules organized support and confidence with different colors representing the order of specific rules.
+
+Plot 3 shows a network plot of rules with confidence > 0.01 and support > 0.005, this was done to make the network more presentable, trying to plot all of the rules creates a messy and un-interpretable network. 
+  
+```{r 3C, message=FALSE, echo=FALSE}
+
+plot(groceryrules, measure = c("support", "lift"), shading = "confidence")
+
+# "two key" plot: coloring is by size (order) of item set
+plot(groceryrules, method='two-key plot')
+
+knitr::include_graphics("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercise_4/screenshot_210619.png")
+
+
+```
+
+
+  
+  
+
