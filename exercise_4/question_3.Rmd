@@ -114,7 +114,7 @@ plot(groceryrules, measure = c("support", "lift"), shading = "confidence")
 # "two key" plot: coloring is by size (order) of item set
 plot(groceryrules, method='two-key plot')
 
-knitr::include_graphics("/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercise_4/question_3_files/figure-markdown_strict/screenshot_210619.png")
+knitr::include_graphics("./question_3_files/figure-markdown_strict/screenshot_210619.png")
 
 
 ```

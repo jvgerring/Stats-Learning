@@ -241,4 +241,4 @@ support &gt; 0.005, this was done to make the network more presentable,
 trying to plot all of the rules creates a messy and un-interpretable
 network.
 
-![](question_3_files/figure-markdown_strict/3C-1.png)![](question_3_files/figure-markdown_strict/3C-2.png)<img src="/Users/jaymegerring/Downloads/GitHub/Stats-Learning/exercise_4/question_3_files/figure-markdown_strict/screenshot_210619.png" width="1024" />
+![](question_3_files/figure-markdown_strict/3C-1.png)![](question_3_files/figure-markdown_strict/3C-2.png)<img src="./question_3_files/figure-markdown_strict/screenshot_210619.png" width="1024" />
